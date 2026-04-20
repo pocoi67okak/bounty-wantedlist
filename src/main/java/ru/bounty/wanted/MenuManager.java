@@ -40,9 +40,27 @@ public final class MenuManager implements Listener {
         Inventory inventory = Bukkit.createInventory(holder, 27, color("&6Баунти"));
         holder.attach(inventory);
 
-        inventory.setItem(11, named(Material.PLAYER_HEAD, "&eСписок розыска", "&7Посмотреть активные ставки."));
-        inventory.setItem(13, named(Material.NAME_TAG, "&aПоставить розыск", "&7Выбрать игрока и положить награду."));
-        inventory.setItem(15, named(Material.CHEST, "&bМои ставки", "&7Посмотреть твои созданные ставки."));
+        inventory.setItem(10, named(Material.PLAYER_HEAD, "&eСписок розыска", "&7Посмотреть активные ставки."));
+        inventory.setItem(12, named(Material.NAME_TAG, "&aПоставить розыск", "&7Выбрать игрока и положить награду."));
+        inventory.setItem(14, named(Material.CHEST, "&bМои ставки", "&7Посмотреть твои созданные ставки."));
+        inventory.setItem(16, named(Material.REDSTONE_TORCH, "&dНастройки", "&7Настроить уведомления."));
+
+        player.openInventory(inventory);
+    }
+
+    public void openSettings(Player player) {
+        SettingsHolder holder = new SettingsHolder();
+        Inventory inventory = Bukkit.createInventory(holder, 27, color("&6Настройки"));
+        holder.attach(inventory);
+
+        boolean enabled = plugin.getSettings().isNewBountyNotificationEnabled(player.getUniqueId());
+        Material material = enabled ? Material.LIME_DYE : Material.GRAY_DYE;
+        String status = enabled ? "&aВключено" : "&cВыключено";
+        inventory.setItem(13, named(material,
+                "&eУведомлять о новых заявках",
+                "&7Статус: " + status,
+                "&7Нажми, чтобы переключить."));
+        inventory.setItem(22, named(Material.ARROW, "&eНазад", "&7Вернуться в главное меню."));
 
         player.openInventory(inventory);
     }
@@ -74,6 +92,12 @@ public final class MenuManager implements Listener {
 
     public void openBountyDetails(Player player, String bountyId) {
         plugin.getStorage().find(bountyId).ifPresentOrElse(bounty -> {
+            if (bounty.isTaken()) {
+                player.sendMessage(BountyPlugin.PREFIX + "Эту ставку уже взяли.");
+                openWantedList(player);
+                return;
+            }
+
             BountyDetailsHolder holder = new BountyDetailsHolder(bountyId);
             Inventory inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, color("&6Розыск: &e" + bounty.getTargetName()));
             holder.attach(inventory);
@@ -186,6 +210,8 @@ public final class MenuManager implements Listener {
             handleMyBountiesClick(player, myBountiesHolder, event.getRawSlot());
         } else if (holder instanceof OwnedBountyHolder ownedBountyHolder) {
             handleOwnedBountyClick(player, ownedBountyHolder, event.getRawSlot());
+        } else if (holder instanceof SettingsHolder) {
+            handleSettingsClick(player, event.getRawSlot());
         }
     }
 
@@ -228,14 +254,30 @@ public final class MenuManager implements Listener {
     }
 
     private void handleMainClick(Player player, int rawSlot) {
-        if (rawSlot == 11) {
+        if (rawSlot == 10) {
             openWantedList(player);
-        } else if (rawSlot == 13) {
+        } else if (rawSlot == 12) {
             plugin.startTargetPrompt(player);
             player.closeInventory();
             player.sendMessage(BountyPlugin.PREFIX + "Напиши ник человека или §eОтмена§f для отмены.");
-        } else if (rawSlot == 15) {
+        } else if (rawSlot == 14) {
             openMyBounties(player);
+        } else if (rawSlot == 16) {
+            openSettings(player);
+        }
+    }
+
+    private void handleSettingsClick(Player player, int rawSlot) {
+        if (rawSlot == 22) {
+            openMain(player);
+            return;
+        }
+
+        if (rawSlot == 13) {
+            boolean enabled = plugin.getSettings().toggleNewBountyNotification(player.getUniqueId());
+            player.sendMessage(BountyPlugin.PREFIX + "Уведомления о новых заявках: "
+                    + (enabled ? "§aвключены§f." : "§cвыключены§f."));
+            openSettings(player);
         }
     }
 
@@ -319,6 +361,7 @@ public final class MenuManager implements Listener {
         Bounty bounty = Bounty.create(holder.targetUuid, holder.targetName, player, reward);
         plugin.getStorage().add(bounty);
         plugin.getStorage().save();
+        plugin.notifyNewBounty(bounty);
 
         player.closeInventory();
         player.sendMessage(BountyPlugin.PREFIX + "Розыск на §e" + holder.targetName + "§f поставлен.");
@@ -507,5 +550,8 @@ public final class MenuManager implements Listener {
         private OwnedBountyHolder(String bountyId) {
             this.bountyId = bountyId;
         }
+    }
+
+    private static final class SettingsHolder extends MenuHolder {
     }
 }

@@ -30,6 +30,11 @@ public final class BountyCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (args.length > 1 && args[0].equalsIgnoreCase("open")) {
+            plugin.getMenus().openBountyDetails(player, args[1]);
+            return true;
+        }
+
         plugin.getMenus().openMain(player);
         return true;
     }
