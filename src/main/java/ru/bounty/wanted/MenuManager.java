@@ -466,7 +466,7 @@ public final class MenuManager implements Listener {
             return inventory;
         }
 
-        private void attach(Inventory inventory) {
+        protected void attach(Inventory inventory) {
             this.inventory = inventory;
         }
     }
