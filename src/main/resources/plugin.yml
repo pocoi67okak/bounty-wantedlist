@@ -1,0 +1,12 @@
+name: Bounty
+version: ${project.version}
+main: ru.bounty.wanted.BountyPlugin
+api-version: '1.21'
+prefix: Баунти
+authors:
+  - saita
+description: Баунти с меню розыска для команды /wantedlist.
+commands:
+  wantedlist:
+    description: Открыть меню баунти.
+    usage: /wantedlist [decline]
